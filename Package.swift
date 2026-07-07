@@ -52,8 +52,13 @@ let package = Package(
       name: "MLKitLanguageID",
       targets: ["MLKitLanguageID", "MLKitNaturalLanguage", "MLKitXenoCommon", "MLKitCommon", "GoogleToolboxForMac", "Common"]),
     .library(
+      // feeberse fork: MLKitXenoCommon references _OBJC_CLASS_$_MLKVision3DPoint
+      // (defined in MLKitVision, backed by MLImage). Upstream's MLKitTranslate
+      // product omits both, so consumers fail to link with an undefined symbol.
+      // Add MLKitVision + MLImage so the product links standalone. See
+      // feeberse_score_ios issue #406.
       name: "MLKitTranslate",
-      targets: ["MLKitTranslate", "SSZipArchive", "MLKitNaturalLanguage", "MLKitXenoCommon", "MLKitCommon", "GoogleToolboxForMac", "Common"]),
+      targets: ["MLKitTranslate", "SSZipArchive", "MLKitNaturalLanguage", "MLKitXenoCommon", "MLKitCommon", "GoogleToolboxForMac", "MLKitVision", "MLImage", "Common"]),
     .library(
       name: "MLKitSmartReply",
       targets: ["MLKitSmartReply", "MLKitLanguageID", "MLKitNaturalLanguage", "MLKitXenoCommon", "MLKitCommon", "GoogleToolboxForMac", "Common"]),
