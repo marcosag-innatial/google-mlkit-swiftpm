@@ -52,12 +52,19 @@ let package = Package(
       name: "MLKitLanguageID",
       targets: ["MLKitLanguageID", "MLKitNaturalLanguage", "MLKitXenoCommon", "MLKitCommon", "GoogleToolboxForMac", "Common"]),
     .library(
-      // feeberse fork: MLKitXenoCommon references _OBJC_CLASS_$_MLKVision3DPoint
-      // (defined in MLKitVision, backed by MLImage). Upstream's MLKitTranslate
-      // product omits both, so consumers fail to link with an undefined symbol.
-      // Add MLKitVision + MLImage so the product links standalone. See
-      // feeberse_score_ios issue #406.
+      // feeberse fork (feeberse_score_ios #406):
+      // 1. MLKitXenoCommon references _OBJC_CLASS_$_MLKVision3DPoint (defined in
+      //    MLKitVision, backed by MLImage). Upstream's MLKitTranslate product omits
+      //    both, so consumers fail to link with an undefined symbol — add them.
+      // 2. type: .static — the underlying binaryTargets are static archives, but
+      //    SPM otherwise links this product as a dynamic framework AND the app also
+      //    static-links the archives (via -ObjC), yielding TWO copies of ML Kit at
+      //    runtime with two separate SRLRegistry (DI) instances. Lookups then miss
+      //    bindings ("No binding was found for ... CCTPolicyVending_API") and
+      //    translation silently fails. Forcing static linkage gives a single copy —
+      //    the same configuration CocoaPods uses (static + -ObjC).
       name: "MLKitTranslate",
+      type: .static,
       targets: ["MLKitTranslate", "SSZipArchive", "MLKitNaturalLanguage", "MLKitXenoCommon", "MLKitCommon", "GoogleToolboxForMac", "MLKitVision", "MLImage", "Common"]),
     .library(
       name: "MLKitSmartReply",
