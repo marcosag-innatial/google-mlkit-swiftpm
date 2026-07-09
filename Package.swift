@@ -164,9 +164,14 @@ let package = Package(
       url: "https://github.com/d-date/google-mlkit-swiftpm/releases/download/9.0.0-1/MLKitVision.xcframework.zip",
       checksum: "b26f8c96d1e12515b990fca0b2237d60363d7bddc925d5ec61d7ee7d8b5e83c3"),
     .binaryTarget(
+      // feeberse fork (feeberse_score_ios #406): re-signed at source to satisfy
+      // App Store ITMS-91065. d-date ships GoogleToolboxForMac.xcframework
+      // unsigned, so Xcode records signed=false for it and App Store validation
+      // rejects the build. This asset is the SAME binary, code-signed (inner
+      // frameworks + wrapper) with a secure timestamp so the origin is recorded.
       name: "GoogleToolboxForMac",
-      url: "https://github.com/d-date/google-mlkit-swiftpm/releases/download/9.0.0-1/GoogleToolboxForMac.xcframework.zip",
-      checksum: "c095707fd64bad2f36cd9bcc86251de6aab7197d5b35112f3cdf40c6c94a6b4b"),
+      url: "https://github.com/marcosag-innatial/google-mlkit-swiftpm/releases/download/9.0.0-feeberse.3/GoogleToolboxForMac.xcframework.zip",
+      checksum: "9732da86bd7c7163ee2a7c286598ccf8c4527886f0877ea66d871d596fdcc962"),
     .binaryTarget(
       name: "MLKitTextRecognition",
       url: "https://github.com/d-date/google-mlkit-swiftpm/releases/download/9.0.0-1/MLKitTextRecognition.xcframework.zip",
