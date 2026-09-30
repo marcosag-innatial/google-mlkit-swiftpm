@@ -103,8 +103,14 @@ if $PROGRAM_NAME == __FILE__
 
     required = closure(graph, name) - PROVIDED_BY_COMMON
     required &= available
-    missing = required - declared
     extra = declared - required - ["Common"]
+
+    # A listed target is linked whether the pod needs it or not, so its own
+    # closure has to be listed too: MLKitTranslate listing MLKitXenoCommon
+    # without MLKitVision fails with an undefined _OBJC_CLASS_$_MLKVision3DPoint.
+    linked = declared.flat_map { |target| closure(graph, target) } - PROVIDED_BY_COMMON
+    linked &= available
+    missing = (required | linked) - declared
 
     if missing.empty?
       puts format("%-32s ok%s", name, extra.empty? ? "" : " (unused: #{extra.join(", ")})")
@@ -112,6 +118,8 @@ if $PROGRAM_NAME == __FILE__
       failures << name
       puts format("%-32s MISSING %s", name, missing.join(", "))
       puts format("%-32s expected targets: %s", "", (required + ["Common"]).inspect)
+      culprits = extra.reject { |target| (closure(graph, target) & missing).empty? }
+      puts format("%-32s or drop the unused %s", "", culprits.inspect) unless culprits.empty?
     end
   end
 
