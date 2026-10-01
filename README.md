@@ -1,118 +1,200 @@
-# Google MLKit SwiftPM Wrapper
+# Google ML Kit for Swift Package Manager
 
-This is experimental project for building MLKit in Swift Package Manager.
+Google ships ML Kit only through CocoaPods. This project rebuilds those pods as
+XCFrameworks, publishes them as GitHub Release assets, and exposes every
+user-facing ML Kit iOS API as a SwiftPM library product.
 
 ## Requirements
 
-- iOS 15 and later
-- Xcode 15 and later
+- iOS 15 or later
+- Xcode 15 or later to consume the package; Xcode 26 or later to build it
+
+Apple Silicon simulators are supported — see [Simulator support](#simulator-support).
 
 ## Installation
 
-### Use Swift Package Manager to install
-
-Add the package dependency to your `Package.swift`:
-
 ```swift
 dependencies: [
-    .package(url: "https://github.com/d-date/google-mlkit-swiftpm", from: "9.0.0")
+    .package(url: "https://github.com/d-date/google-mlkit-swiftpm", from: "9.0.2")
 ]
 ```
 
-> **Submitting to App Store?** The `9.0.0` zips embed Info.plist values like `1.0.0-beta16` for a few internal frameworks, which App Store Connect rejects. Pin the wrapper-only repackage instead:
->
-> ```swift
-> .package(url: "https://github.com/d-date/google-mlkit-swiftpm", exact: "9.0.0-1")
-> ```
->
-> `9.0.0-1` is a SemVer pre-release of the same upstream MLKit `9.0.0` build with the Info.plist regression fixed. SwiftPM's `from: "9.0.0"` excludes pre-release tags, so existing consumers stay on `9.0.0`; AppStore-blocked consumers opt in via `exact:`.
-
-Then add the specific ML Kit modules you need to your target dependencies:
+Then add the modules you need:
 
 ```swift
 .target(
     name: "YourTarget",
     dependencies: [
         .product(name: "MLKitBarcodeScanning", package: "google-mlkit-swiftpm"),
-        .product(name: "MLKitFaceDetection", package: "google-mlkit-swiftpm"),
         .product(name: "MLKitTextRecognition", package: "google-mlkit-swiftpm"),
-        // Also available: MLKitTextRecognitionChinese, MLKitTextRecognitionDevanagari,
-        //                  MLKitTextRecognitionJapanese, MLKitTextRecognitionKorean
-        .product(name: "MLKitImageLabeling", package: "google-mlkit-swiftpm"),
-        .product(name: "MLKitObjectDetection", package: "google-mlkit-swiftpm"),
-        .product(name: "MLKitPoseDetection", package: "google-mlkit-swiftpm"),
-        .product(name: "MLKitSegmentationSelfie", package: "google-mlkit-swiftpm"),
-        .product(name: "MLKitLanguageID", package: "google-mlkit-swiftpm"),
-        .product(name: "MLKitTranslate", package: "google-mlkit-swiftpm"),
-        .product(name: "MLKitSmartReply", package: "google-mlkit-swiftpm"),
     ]
 )
 ```
 
-### Add Linker flags
+Three steps are **not optional**. Skip any of them and the module fails at
+runtime rather than at build time:
 
-Add these flags to `Other Linker Flags` in Build Settings of your Xcode projects.
+1. [Add the linker flags](#1-add-the-linker-flags)
+2. [Add the resource bundles your modules need](#2-add-the-resource-bundles)
+3. Nothing else — but read [Simulator support](#simulator-support) if you are
+   coming from an older release with `EXCLUDED_ARCHS` set.
+
+> **Upgrading from 9.0.0 or 9.0.0-1?** `9.0.2` is the same upstream ML Kit
+> 9.0.0 build, repackaged. Since 9.0.1, text recognition, pose detection and
+> selfie segmentation ship their models at all, a single product can be adopted
+> without undefined symbols, the simulator slice covers arm64, and App Store
+> Connect accepts the upload. If you set
+> `EXCLUDED_ARCHS[sdk=iphonesimulator*] = arm64` for an earlier release, remove it.
+
+### 1. Add the linker flags
+
+Add these to **Other Linker Flags** for your app target:
 
 - `-ObjC`
 - `-all_load`
 
-### Link resource bundles to your project (if needed)
+ML Kit ships as static archives that register classes and models through
+Objective-C categories and static initialisers. Without these flags the linker
+drops the archive members that hold them, and you get `unrecognized selector`
+or a model that refuses to load.
 
-Some ML Kit modules require resource bundles. Currently:
+### 2. Add the resource bundles
 
-#### Face Detection
-The `MLKitFaceDetection` module requires `GoogleMVFaceDetectorResources.bundle`. Since bundles can't be automatically included via Swift Package Manager, you need to manually add it to your project.
-
-Download `GoogleMVFaceDetectorResources.bundle` from [Release](https://github.com/d-date/google-mlkit-swiftpm/releases/download/9.0.0/GoogleMVFaceDetectorResources.bundle.zip) and add it to your Xcode project, ensuring it's included in your build target.
-
-**Note**: Other modules (Text Recognition, Pose Detection, Object Detection, Selfie Segmentation, Translation) may also require resource bundles or downloaded models at runtime. Check the official [ML Kit documentation](https://developers.google.com/ml-kit) for specific requirements.
-
-## Supported Features
-
-This package supports the following Google ML Kit features:
-
-### Vision APIs
-- **Barcode Scanning** - Scan and decode barcodes
-- **Face Detection** - Detect faces and facial features
-- **Text Recognition** - Recognize text in images (v2) with variants for Chinese, Devanagari, Japanese, and Korean
-- **Image Labeling** - Identify objects, locations, activities, and more (standard and custom models)
-- **Object Detection & Tracking** - Detect and track objects in images and video (standard and custom models)
-- **Pose Detection** - Detect body poses and positions (standard and accurate)
-- **Selfie Segmentation** - Segment people from the background
-
-### Language APIs
-- **Language Identification** - Identify the language of text
-- **Translation** - Translate text between languages
-- **Smart Reply** - Generate contextual reply suggestions
-
-## Limitation
-
-- Since pre-built MLKit binary missing `arm64` for iphonesimulator, this project enables to build in `arm64` for iphoneos and `x86_64` for iphonesimulator only.
-
-## Example
-
-Open `Example/Example.xcworkspace` and fixing code signing to yours.
-
-## Automation
-
-This repository includes automation tools for updating to new MLKit versions:
-
-- **Automated Version Checking**: Daily checks for new MLKit releases via GitHub Actions
-- **Build Automation**: Scripts to build and package new versions
-- **GitHub Actions**: Workflows for automated builds and releases
-
-For detailed information, see [AUTOMATION.md](AUTOMATION.md).
-
-### Quick Start for Maintainers
-
-To update to a new MLKit version:
+Every ML Kit model lives in a resource bundle, and Swift Package Manager cannot
+carry a resource bundle inside a binary target. Each bundle is published as a
+separate release asset: download the ones your modules need, add them to your
+Xcode project, and make sure they land in **Copy Bundle Resources** of your app
+target.
 
 ```bash
-# Check for updates
-ruby scripts/check_mlkit_version.rb
+./scripts/download_bundles.sh 9.0.2
+```
 
-# Build new version (replace with actual version)
+| Bundle | Needed by |
+| --- | --- |
+| `GoogleMVFaceDetectorResources.bundle` | `MLKitFaceDetection` |
+| `LatinOCRResources.bundle` | `MLKitTextRecognition` |
+| `ChineseOCRResources.bundle` | `MLKitTextRecognitionChinese` |
+| `DevanagariOCRResources.bundle` | `MLKitTextRecognitionDevanagari` |
+| `JapaneseOCRResources.bundle` | `MLKitTextRecognitionJapanese` |
+| `KoreanOCRResources.bundle` | `MLKitTextRecognitionKorean` |
+| `MLKitImageLabelingResources.bundle` | `MLKitImageLabeling` |
+| `MLKitObjectDetectionResources.bundle` | `MLKitObjectDetection` |
+| `MLKitObjectDetectionCommonResources.bundle` | `MLKitImageLabeling`, `MLKitImageLabelingCustom`, `MLKitObjectDetection`, `MLKitObjectDetectionCustom` |
+| `MLKitPoseDetectionFastResources.bundle` | `MLKitPoseDetection` |
+| `MLKitPoseDetectionAccurateResources.bundle` | `MLKitPoseDetectionAccurate` |
+| `MLKitPoseDetectionCommonResources.bundle` | `MLKitPoseDetection`, `MLKitPoseDetectionAccurate` |
+| `MLKitSegmentationSelfieResources.bundle` | `MLKitSegmentationSelfie` |
+| `MLKitSegmentationCommonResources.bundle` | `MLKitSegmentationSelfie` |
+| `MLKitXenoResources.bundle` | `MLKitPoseDetection`, `MLKitPoseDetectionAccurate`, `MLKitSegmentationSelfie` |
+| `MLKitTranslate_resource.bundle` | `MLKitTranslate` |
+| `MLKitDigitalInkRecognition_resource.bundle` | `MLKitDigitalInkRecognition` |
+| `PredictOnDeviceResource.bundle` | `MLKitSmartReply` |
+
+`PredictOnDevice_resource.bundle` is also published: it is the same content
+under the name ML Kit nests inside its own framework, which is what releases
+before 9.0.1 shipped. Add whichever your build already refers to; adding both
+is harmless.
+
+A missing bundle shows up as a runtime throw — text recognition, for example,
+raises `MLKTextRecognizerInternalErrorCreationFailure` with "Invalid model
+path.".
+
+## Products
+
+Add only the products you use; each one links just the frameworks it needs.
+
+### Vision
+
+| Product | What it does |
+| --- | --- |
+| `MLKitBarcodeScanning` | Scan and decode barcodes |
+| `MLKitFaceDetection` | Detect faces, contours and facial features |
+| `MLKitTextRecognition` | Recognise Latin-script text (v2) |
+| `MLKitTextRecognitionChinese` | Chinese text |
+| `MLKitTextRecognitionDevanagari` | Devanagari text |
+| `MLKitTextRecognitionJapanese` | Japanese text |
+| `MLKitTextRecognitionKorean` | Korean text |
+| `MLKitImageLabeling` | Label objects, places and activities |
+| `MLKitImageLabelingCustom` | Image labeling with your own model |
+| `MLKitObjectDetection` | Detect and track objects |
+| `MLKitObjectDetectionCustom` | Object detection with your own model |
+| `MLKitPoseDetection` | Body pose detection |
+| `MLKitPoseDetectionAccurate` | Body pose detection, accurate model |
+| `MLKitSegmentationSelfie` | Separate people from the background |
+
+### Language
+
+| Product | What it does |
+| --- | --- |
+| `MLKitLanguageID` | Identify the language of a string |
+| `MLKitTranslate` | Translate between languages on device |
+| `MLKitSmartReply` | Suggest contextual replies |
+| `MLKitEntityExtraction` | Find addresses, dates, phone numbers and the like in text |
+| `MLKitDigitalInkRecognition` | Recognise handwriting and drawn strokes |
+
+## Simulator support
+
+ML Kit's pre-built binaries contain no arm64 simulator code, and Xcode 26
+dropped Rosetta simulators — so on Apple Silicon the published XCFrameworks
+used to be unusable in the Simulator entirely.
+
+Since 9.0.1 the arm64 simulator slice is synthesised from the device slice by
+rewriting the Mach-O platform (`scripts/postprocess_xcframeworks.rb`).
+Published XCFrameworks carry `arm64` for iphoneos and `arm64` + `x86_64` for
+iphonesimulator, so no `EXCLUDED_ARCHS` workaround is needed.
+
+## Known limitations
+
+- **No dSYMs.** Google ships ML Kit without debug info, so Xcode's archive step
+  reports "Upload Symbols Failed" for each ML Kit framework. The frameworks are
+  linked statically, so their symbols end up in your app's own dSYM; the
+  warnings are spurious and do not block submission. You could not symbolicate
+  inside ML Kit anyway — it is closed source.
+- **Resource bundles are manual.** Swift Package Manager has no way to ship
+  them inside a binary target. See [above](#2-add-the-resource-bundles).
+- **Digital ink recognition and entity extraction download their models at
+  runtime** from Google, so they ship no bundled model and need network access
+  the first time you use them.
+- **The wrapper version is not the pod version.** `9.0.2` repackages upstream
+  ML Kit `9.0.0`; the pod versions each framework reports are Google's own.
+
+## Example app
+
+```bash
+git submodule update --init
+./scripts/download_bundles.sh 9.0.2
+cd Example && open Example.xcworkspace
+```
+
+Set code signing to your own team. The app runs on a device and on the Apple
+Silicon Simulator, and exercises every module.
+
+## Maintaining this package
+
+The build is driven by the `Makefile`; `CLAUDE.md` explains the pipeline stage
+by stage and `AUTOMATION.md` covers the release automation.
+
+```bash
+git submodule update --init          # xcframework-maker
+make run                             # build everything into GoogleMLKit/
+make verify                          # module lists, Info.plists, product closure
+./scripts/verify_runtime.sh          # slices, Info.plists, symbol table
+./scripts/verify_local_archive.sh    # run ML Kit on the Simulator, archive for device
+./scripts/verify_app_store_upload.sh --upload   # Apple-side validation and delivery
+```
+
+`verify_local_archive.sh` is the gate that matters: it runs inference on the
+arm64 Simulator, launches the app, archives for device, and checks that every
+model bundle reached the app and that nothing was linked dynamically. A missing
+model bundle builds and archives perfectly and only fails when inference runs,
+so build-time checks alone are not enough.
+
+To pick up a new upstream ML Kit version:
+
+```bash
+ruby scripts/check_mlkit_version.rb
 ./scripts/build_all.sh <version>
 ```
 
-Or trigger the **Build MLKit XCFrameworks** workflow from the GitHub Actions tab.
+Or run the **Build MLKit XCFrameworks** workflow from the Actions tab.

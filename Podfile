@@ -5,7 +5,12 @@ platform :ios, '15.5'
 install! 'cocoapods', integrate_targets: false
 
 target 'MLKit' do
-  use_frameworks!
+  # Static linkage keeps GoogleToolboxForMac and SSZipArchive -- the only pods
+  # here that are compiled rather than vendored -- out of the consumer app's
+  # Frameworks directory. Embedded dynamic copies of a "commonly used
+  # third-party SDK" are rejected by App Store Connect with ITMS-91065
+  # ("Missing signature"), and this repo cannot sign Google's binaries.
+  use_frameworks! :linkage => :static
   # Existing modules
   pod 'GoogleMLKit/FaceDetection', '~> 9.0.0'
   pod 'GoogleMLKit/BarcodeScanning', '~> 9.0.0'
@@ -27,6 +32,8 @@ target 'MLKit' do
   # Vision modules - Selfie Segmentation
   pod 'GoogleMLKit/SegmentationSelfie', '~> 9.0.0'
   # Language modules
+  pod 'GoogleMLKit/DigitalInkRecognition', '~> 9.0.0'
+  pod 'GoogleMLKit/EntityExtraction', '~> 9.0.0'
   pod 'GoogleMLKit/LanguageID', '~> 9.0.0'
   pod 'GoogleMLKit/Translate', '~> 9.0.0'
   pod 'GoogleMLKit/SmartReply', '~> 9.0.0'

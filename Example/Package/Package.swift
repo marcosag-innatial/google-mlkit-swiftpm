@@ -12,7 +12,7 @@ let package = Package(
   ],
   dependencies: [
     .package(path: "../../"),
-    .package(url: "https://github.com/firebase/firebase-ios-sdk", from: "12.0.0"),
+    .package(url: "https://github.com/firebase/firebase-ios-sdk", from: "12.19.2"),
   ],
   targets: [
     .target(
@@ -32,6 +32,8 @@ let package = Package(
         .product(name: "MLKitPoseDetection", package: "google-mlkit-swiftpm"),
         .product(name: "MLKitPoseDetectionAccurate", package: "google-mlkit-swiftpm"),
         .product(name: "MLKitSegmentationSelfie", package: "google-mlkit-swiftpm"),
+        .product(name: "MLKitDigitalInkRecognition", package: "google-mlkit-swiftpm"),
+        .product(name: "MLKitEntityExtraction", package: "google-mlkit-swiftpm"),
         .product(name: "MLKitLanguageID", package: "google-mlkit-swiftpm"),
         .product(name: "MLKitTranslate", package: "google-mlkit-swiftpm"),
         .product(name: "MLKitSmartReply", package: "google-mlkit-swiftpm"),
@@ -39,6 +41,17 @@ let package = Package(
       ]),
     .testTarget(
       name: "CameraTests",
-      dependencies: ["Camera"]),
+      dependencies: [
+        "Camera",
+        // Neither module is re-exported by a Camera source, so the tests
+        // depend on them directly.
+        .product(name: "MLKitDigitalInkRecognition", package: "google-mlkit-swiftpm"),
+        .product(name: "MLKitEntityExtraction", package: "google-mlkit-swiftpm"),
+      ],
+      // The same flags the README requires of consumers. ML Kit ships as static
+      // archives, and without -all_load the linker drops the archive members
+      // holding the OCR model data -- text recognition then fails at runtime
+      // with "Invalid model path.".
+      linkerSettings: [.unsafeFlags(["-Xlinker", "-ObjC", "-Xlinker", "-all_load"])]),
   ]
 )

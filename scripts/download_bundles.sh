@@ -2,7 +2,7 @@
 
 set -e
 
-VERSION=${1:-9.0.0}
+VERSION=${1:-9.0.2}
 DEST_DIR="Example/Example/Resources/Bundles"
 
 echo "Downloading ML Kit resource bundles for version ${VERSION}..."
@@ -13,12 +13,23 @@ mkdir -p "${DEST_DIR}"
 # Download and extract bundles
 BUNDLES=(
   "GoogleMVFaceDetectorResources.bundle"
+  "LatinOCRResources.bundle"
+  "ChineseOCRResources.bundle"
+  "DevanagariOCRResources.bundle"
+  "JapaneseOCRResources.bundle"
+  "KoreanOCRResources.bundle"
   "MLKitImageLabelingResources.bundle"
-  "MLKitObjectDetectionCommonResources.bundle"
   "MLKitObjectDetectionResources.bundle"
-  "PredictOnDevice_resource.bundle"
-  "MLKitTranslate_resource.bundle"
+  "MLKitObjectDetectionCommonResources.bundle"
+  "MLKitPoseDetectionFastResources.bundle"
+  "MLKitPoseDetectionAccurateResources.bundle"
+  "MLKitPoseDetectionCommonResources.bundle"
+  "MLKitSegmentationSelfieResources.bundle"
+  "MLKitSegmentationCommonResources.bundle"
   "MLKitXenoResources.bundle"
+  "MLKitTranslate_resource.bundle"
+  "PredictOnDeviceResource.bundle"
+  "PredictOnDevice_resource.bundle"
 )
 
 for BUNDLE in "${BUNDLES[@]}"; do

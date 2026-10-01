@@ -19,14 +19,14 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.4.9'
+          ruby-version: '3.4.11'
           bundler-cache: true
 
       - name: Set up Xcode
